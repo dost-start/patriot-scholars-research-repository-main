@@ -1,0 +1,44 @@
+{
+  "name": "patriot-scholars-research-repository",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "node node_modules/vitest/dist/cli.js",
+    "test:run": "node node_modules/vitest/dist/cli.js run"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.7.0",
+    "@prisma/client": "^7.8.0",
+    "@supabase/supabase-js": "^2.103.3",
+    "@types/pg": "^8.20.0",
+    "better-auth": "^1.6.5",
+    "lucide-react": "^1.9.0",
+    "next": "16.2.3",
+    "nodemailer": "^8.0.5",
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.20.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^20",
+    "@types/nodemailer": "^8.0.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.3",
+    "jsdom": "^29.0.2",
+    "prisma": "^7.8.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^4.1.4"
+  }
+}

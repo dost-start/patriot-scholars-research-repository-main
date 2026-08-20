@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  --psrr-navy: #0b1f3a;
+  --psrr-navy-cta: #0b3272;
+  --psrr-gold: #d4920a;
+  --psrr-gold-accent: #e5a52a;
+  --psrr-slate: #5a6a7e;
+  --psrr-slate-light: #95a3b3;
+  --psrr-surface: #f7f9fc;
+  --psrr-border: #e1e8f0;
+  --psrr-white: #ffffff;
+  
+  --background: var(--psrr-surface);
+  --foreground: var(--psrr-navy);
+}
+
+@theme inline {
+  --color-psrr-navy: var(--psrr-navy);
+  --color-psrr-navy-cta: var(--psrr-navy-cta);
+  --color-psrr-gold: var(--psrr-gold);
+  --color-psrr-gold-accent: var(--psrr-gold-accent);
+  --color-psrr-slate: var(--psrr-slate);
+  --color-psrr-slate-light: var(--psrr-slate-light);
+  --color-psrr-surface: var(--psrr-surface);
+  --color-psrr-border: var(--psrr-border);
+  --color-psrr-white: var(--psrr-white);
+
+  --font-display: var(--font-syne);
+  --font-sans: var(--font-dm-sans);
+
+  --radius-psrr-large: 80px;
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Design system doesn't explicitly define dark mode yet, 
+     but we'll keep the variables consistent for now. */
+}
+
+body {
+  background: var(--psrr-surface);
+  color: var(--psrr-navy);
+  font-family: var(--font-dm-sans), sans-serif;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-syne), sans-serif;
+  font-weight: 700;
+}
