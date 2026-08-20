@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SCHOLAR
+  PUBLIC
+  ADMIN
+}
+
+enum PaperStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  RETURNED
+  REJECTED
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  name          String   @default("")
+  image         String?
+  role          Role     @default(PUBLIC)
+  isActive      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  scholarProfile ScholarProfile?
+  papers         Paper[]         @relation("Uploader")
+  downloads      Download[]
+  auditLogs      AuditLog[]      @relation("AdminActions")
+  sessions       Session[]
+  accounts       Account[]
+}
+
+model ScholarProfile {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  spasId     String   @unique
+  fullName   String
+  birthdate  DateTime
+  university String
+  region     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Paper {
+  id             String      @id @default(cuid())
+  title          String
+  abstract       String
+  year           Int
+  university     String
+  region         String
+  fieldOfStudy   String
+  advisorName    String
+  keywords       String[]
+  filePath       String
+  status         PaperStatus @default(PENDING)
+  returnFeedback String?
+  uploaderId     String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  uploader  User          @relation("Uploader", fields: [uploaderId], references: [id])
+  authors   PaperAuthor[]
+  downloads Download[]
+  auditLogs AuditLog[]
+}
+
+model PaperAuthor {
+  paperId    String
+  authorName String
+  userId     String?
+  paper      Paper   @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@id([paperId, authorName])
+}
+
+model Download {
+  id           String   @id @default(cuid())
+  paperId      String
+  userId       String
+  downloadedAt DateTime @default(now())
+
+  paper Paper @relation(fields: [paperId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  paperId   String?
+  action    String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  admin User   @relation("AdminActions", fields: [adminId], references: [id])
+  paper Paper? @relation(fields: [paperId], references: [id])
+}
+
+model SpasRecord {
+  id        String   @id @default(cuid())
+  spasId    String   @unique
+  fullName  String
+  birthdate DateTime
+}
+
+// Better Auth required models
+model Session {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+}
