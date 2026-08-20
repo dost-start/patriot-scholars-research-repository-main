@@ -111,9 +111,11 @@ export async function submitPaper(formData: FormData) {
         throw new Error("Unauthorized to edit this paper.");
       }
 
-      // Overwriting files is only allowed if status is DRAFT or RETURNED
-      if (storagePath && existing.status !== "DRAFT" && existing.status !== "RETURNED") {
-        throw new Error("You can only replace the PDF file when the submission is in DRAFT or RETURNED status.");
+      // REQ-3.1.3-5: a submission is only editable while it is a draft or has
+      // been returned. Published and in-review papers are frozen, so an edit
+      // cannot silently pull a published paper back out of the repository.
+      if (existing.status !== "DRAFT" && existing.status !== "RETURNED") {
+        throw new Error("This paper can only be edited while it is in DRAFT or RETURNED status.");
       }
 
       // If we have a new storage path, mark the old one for cleanup
