@@ -78,14 +78,14 @@ describe("Auth pages (/login, /register)", () => {
 
 describe("Scholar routes (/scholar/...)", () => {
   it("redirects unauthenticated users to /login", () => {
-    expect(getAuthDecision("/scholar/dashboard", noSession)).toEqual({
+    expect(getAuthDecision("/scholar/submissions", noSession)).toEqual({
       action: "redirect",
       to: "/login",
     })
   })
 
   it("redirects PUBLIC-role users to /403", () => {
-    expect(getAuthDecision("/scholar/dashboard", publicUser)).toEqual({
+    expect(getAuthDecision("/scholar/submissions", publicUser)).toEqual({
       action: "redirect",
       to: "/403",
     })
@@ -93,20 +93,20 @@ describe("Scholar routes (/scholar/...)", () => {
 
   it("redirects inactive scholars to /403", () => {
     // isActive false means admin hasn't activated their account yet
-    expect(getAuthDecision("/scholar/dashboard", inactiveScholar)).toEqual({
+    expect(getAuthDecision("/scholar/submissions", inactiveScholar)).toEqual({
       action: "redirect",
       to: "/403",
     })
   })
 
   it("allows active scholars", () => {
-    expect(getAuthDecision("/scholar/dashboard", activeScholar)).toEqual({
+    expect(getAuthDecision("/scholar/submissions", activeScholar)).toEqual({
       action: "allow",
     })
   })
 
   it("allows admins to access scholar routes", () => {
-    expect(getAuthDecision("/scholar/dashboard", adminUser)).toEqual({
+    expect(getAuthDecision("/scholar/submissions", adminUser)).toEqual({
       action: "allow",
     })
   })
@@ -149,5 +149,15 @@ describe("API routes (/api/...)", () => {
     expect(getAuthDecision("/api/papers", publicUser)).toEqual({
       action: "allow",
     })
+  })
+})
+
+describe("Public scholar profiles (/scholar/<id>)", () => {
+  it("lets anonymous visitors read a scholar profile", () => {
+    expect(getAuthDecision("/scholar/clx123abc", null)).toEqual({ action: "allow" })
+  })
+
+  it("lets public-role users read a scholar profile", () => {
+    expect(getAuthDecision("/scholar/clx123abc", publicUser)).toEqual({ action: "allow" })
   })
 })

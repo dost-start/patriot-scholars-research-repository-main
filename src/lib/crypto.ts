@@ -6,7 +6,7 @@
  *
  * The ENCRYPTION_KEY env var must be 64 hex characters (32 bytes).
  */
-import { createCipheriv, createDecipheriv, randomBytes } from "crypto"
+import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "crypto"
 
 const ALGORITHM = "aes-256-gcm"
 const IV_LENGTH = 12 // 96-bit IV recommended for GCM
@@ -75,4 +75,18 @@ export function decryptField(payload: string): string {
   const key = process.env.ENCRYPTION_KEY
   if (!key) throw new Error("ENCRYPTION_KEY env var is not set.")
   return decrypt(payload, key)
+}
+
+/**
+ * Deterministic keyed hash of a PII value.
+ *
+ * `encrypt` uses a random IV, so two encryptions of the same value differ and
+ * a UNIQUE constraint on the ciphertext never fires. Storing this HMAC
+ * alongside the ciphertext gives the database a stable, non-reversible value
+ * to enforce uniqueness and to look rows up by.
+ */
+export function hashField(plaintext: string): string {
+  const key = process.env.ENCRYPTION_KEY
+  if (!key) throw new Error("ENCRYPTION_KEY env var is not set.")
+  return createHmac("sha256", parseKey(key)).update(plaintext).digest("hex")
 }

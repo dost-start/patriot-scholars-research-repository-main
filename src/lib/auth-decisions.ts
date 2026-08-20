@@ -24,7 +24,8 @@ export type AuthDecision =
  * Rules:
  * - /api/*             → always allow (route handlers protect themselves)
  * - /admin/*           → must be ADMIN; else → /login or /403
- * - /scholar/*         → must be SCHOLAR or ADMIN and isActive; else → /login or /403
+ * - scholar workspace  → must be SCHOLAR or ADMIN and isActive; else → /login or /403
+ *   (/scholar/<id> is a public scholar profile and stays open)
  * - /login, /register  → redirect logged-in users to their home page
  * - everything else    → allow
  */
@@ -49,7 +50,15 @@ export function getAuthDecision(
   // -------------------------------------------------------------------------
   // Scholar routes
   // -------------------------------------------------------------------------
-  if (pathname.startsWith("/scholar")) {
+  // Only the scholar workspace is protected. /scholar/<id> is the public
+  // profile page and must stay readable by anyone (REQ-3.1.5-1).
+  const isScholarWorkspace =
+    pathname === "/scholar" ||
+    pathname.startsWith("/scholar/submit") ||
+    pathname.startsWith("/scholar/submissions") ||
+    pathname.startsWith("/scholar/papers")
+
+  if (isScholarWorkspace) {
     if (!session) return { action: "redirect", to: "/login" }
     const canAccess =
       (session.role === "SCHOLAR" && session.isActive) || session.role === "ADMIN"

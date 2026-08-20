@@ -42,7 +42,10 @@ model User {
 model ScholarProfile {
   id         String   @id @default(cuid())
   userId     String   @unique
-  spasId     String   @unique
+  // AES-256-GCM ciphertext (random IV, so it cannot be queried or made UNIQUE)
+  spasId     String
+  // Deterministic HMAC of the SPAS ID — enforces one account per scholar
+  spasIdHash String   @unique
   fullName   String
   birthdate  DateTime
   university String

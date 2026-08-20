@@ -14,6 +14,16 @@ const transporter = nodemailer.createTransport({
   },
 })
 
+/** Escape user-supplied text before it is interpolated into email HTML. */
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
 const BRAND_COLOR_NAVY = "#0B1F3A"
 const BRAND_COLOR_GOLD = "#D4920A"
 
@@ -112,18 +122,29 @@ export async function sendPasswordResetEmail(email: string, url: string) {
 export async function sendStatusUpdate(
   email: string,
   paperTitle: string,
-  status: "PUBLISHED" | "RETURNED",
+  status: "PUBLISHED" | "RETURNED" | "REJECTED",
   feedback?: string | null
 ) {
-  const isApproved = status === "PUBLISHED"
-  const title = isApproved ? "Paper Approved" : "Action Required: Paper Returned"
-  const content = isApproved
-    ? `Great news! Your research paper "<strong>${paperTitle}</strong>" has been reviewed and published in the repository.`
-    : `Your research paper "<strong>${paperTitle}</strong>" has been returned for revision. 
-       ${feedback ? `<br><br><strong>Reviewer Feedback:</strong><br>${feedback}` : ""}`
-  
-  const ctaText = isApproved ? "View Paper" : "Revise Submission"
-  const ctaUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`
+  const title =
+    status === "PUBLISHED"
+      ? "Paper Approved"
+      : status === "RETURNED"
+        ? "Action Required: Paper Returned"
+        : "Paper Rejected"
+
+  const feedbackBlock = feedback
+    ? `<br><br><strong>Reviewer Feedback:</strong><br>${escapeHtml(feedback)}`
+    : ""
+
+  const content =
+    status === "PUBLISHED"
+      ? `Great news! Your research paper "<strong>${escapeHtml(paperTitle)}</strong>" has been reviewed and published in the repository.`
+      : status === "RETURNED"
+        ? `Your research paper "<strong>${escapeHtml(paperTitle)}</strong>" has been returned for revision.${feedbackBlock}`
+        : `Your research paper "<strong>${escapeHtml(paperTitle)}</strong>" was not accepted into the repository.${feedbackBlock}`
+
+  const ctaText = status === "PUBLISHED" ? "View Paper" : "Open My Submissions"
+  const ctaUrl = `${process.env.NEXT_PUBLIC_APP_URL}/scholar/submissions`
 
   const html = getHtmlTemplate(title, content, ctaText, ctaUrl)
 

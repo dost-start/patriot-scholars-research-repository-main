@@ -37,10 +37,17 @@
      but we'll keep the variables consistent for now. */
 }
 
+html {
+  /* The mobile nav drawer is positioned off-canvas; without this it widens the
+     page at small viewports (REQ-3.2.1: usable from 320px up). */
+  overflow-x: hidden;
+}
+
 body {
   background: var(--psrr-surface);
   color: var(--psrr-navy);
   font-family: var(--font-dm-sans), sans-serif;
+  overflow-x: hidden;
 }
 
 h1, h2, h3, .font-display {

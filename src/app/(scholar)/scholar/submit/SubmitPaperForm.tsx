@@ -141,7 +141,7 @@ export default function SubmitPaperForm() {
                 <h4 className="font-display text-sm font-bold uppercase tracking-wider">Reviewer Feedback</h4>
               </div>
               <p className="font-sans text-base italic leading-relaxed text-psrr-navy">
-                "{paperData.returnFeedback}"
+                &ldquo;{paperData.returnFeedback}&rdquo;
               </p>
             </div>
           )}

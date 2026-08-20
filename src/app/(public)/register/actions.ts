@@ -13,7 +13,7 @@
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { lookupScholar } from "@/lib/spas"
-import { encryptField } from "@/lib/crypto"
+import { encryptField, hashField } from "@/lib/crypto"
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -27,10 +27,31 @@ export type ActionResult =
 // Input validation helpers (no external dep — keeps bundle small)
 // ---------------------------------------------------------------------------
 
+/**
+ * REQ-3.1.1-2: minimum 12 characters, including alphanumeric and special
+ * characters.
+ */
+function validatePassword(password: string): string | null {
+  if (!password || password.length < 12) {
+    return "Password must be at least 12 characters."
+  }
+  if (!/[a-zA-Z]/.test(password)) {
+    return "Password must include at least one letter."
+  }
+  if (!/[0-9]/.test(password)) {
+    return "Password must include at least one number."
+  }
+  if (!/[^a-zA-Z0-9]/.test(password)) {
+    return "Password must include at least one special character."
+  }
+  return null
+}
+
 function validateBaseInput(input: {
   name: string
   email: string
   password: string
+  consent?: boolean
 }): ActionResult | null {
   if (!input.email || !input.email.includes("@")) {
     return { success: false, error: "A valid email address is required.", field: "email" }
@@ -38,11 +59,17 @@ function validateBaseInput(input: {
   if (!input.name || input.name.trim().length === 0) {
     return { success: false, error: "Name is required.", field: "name" }
   }
-  if (!input.password || input.password.length < 12) {
+  const passwordError = validatePassword(input.password)
+  if (passwordError) {
+    return { success: false, error: passwordError, field: "password" }
+  }
+  // REQ-3.2.2-1: explicit Data Privacy Act consent is required before any
+  // personal data is stored.
+  if (input.consent !== true) {
     return {
       success: false,
-      error: "Password must be at least 12 characters.",
-      field: "password",
+      error: "You must agree to the Data Privacy Act (RA 10173) terms to register.",
+      field: "consent",
     }
   }
   return null
@@ -56,6 +83,7 @@ export async function registerPublicUser(input: {
   name: string
   email: string
   password: string
+  consent?: boolean
 }): Promise<ActionResult> {
   const validationError = validateBaseInput(input)
   if (validationError) return validationError
@@ -89,6 +117,7 @@ export async function registerScholarUser(input: {
   password: string
   spasId: string
   birthdate: Date
+  consent?: boolean
 }): Promise<ActionResult> {
   // 1. Validate base fields
   const validationError = validateBaseInput(input)
@@ -119,7 +148,20 @@ export async function registerScholarUser(input: {
     return { success: false, error: "SPAS verification failed." }
   }
 
-  // 3. Create the user account via Better Auth
+  // 3. Reject a SPAS ID that already has an account. The stored spasId is
+  //    AES-GCM ciphertext with a random IV, so the lookup goes through the
+  //    deterministic HMAC column instead.
+  const spasIdHash = hashField(input.spasId.trim())
+  const existingProfile = await db.scholarProfile.findUnique({ where: { spasIdHash } })
+  if (existingProfile) {
+    return {
+      success: false,
+      error: "An account already exists for this SPAS ID. Please sign in or use Forgot Password.",
+      field: "spasId",
+    }
+  }
+
+  // 4. Create the user account via Better Auth
   let userId: string
   try {
     const result = await auth.api.signUpEmail({
@@ -138,27 +180,30 @@ export async function registerScholarUser(input: {
     return { success: false, error: message }
   }
 
-  // 4. Upgrade role to SCHOLAR and create ScholarProfile (within a transaction)
+  // 5. Upgrade role to SCHOLAR and create ScholarProfile in one transaction so
+  //    a half-registered account can never be left behind.
   try {
-    await db.user.update({
-      where: { id: userId },
-      data: { role: "SCHOLAR" },
-    })
-
     // Encrypt PII before saving
     const encryptedSpasId = encryptField(input.spasId.trim())
     const encryptedFullName = encryptField(spasResult.fullName)
 
-    await db.scholarProfile.create({
-      data: {
-        userId,
-        spasId: encryptedSpasId,
-        fullName: encryptedFullName,
-        birthdate: input.birthdate,
-        university: "", // populated from ScholarProfile edit or SPAS data
-        region: "",
-      },
-    })
+    await db.$transaction([
+      db.user.update({
+        where: { id: userId },
+        data: { role: "SCHOLAR" },
+      }),
+      db.scholarProfile.create({
+        data: {
+          userId,
+          spasId: encryptedSpasId,
+          spasIdHash,
+          fullName: encryptedFullName,
+          birthdate: input.birthdate,
+          university: "", // populated from ScholarProfile edit or SPAS data
+          region: "",
+        },
+      }),
+    ])
   } catch (err) {
     // Profile creation failed — log but don't expose internals to the user
     console.error("[registerScholarUser] profile creation failed:", err)

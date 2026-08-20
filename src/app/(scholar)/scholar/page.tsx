@@ -122,7 +122,7 @@ export default async function ScholarDashboard() {
                   {paper.status === 'RETURNED' && paper.returnFeedback && (
                     <div className="rounded-lg bg-rose-50 p-4 border border-rose-100 text-sm">
                       <p className="font-bold text-rose-700 mb-1">Feedback from Reviewer:</p>
-                      <p className="text-rose-600 italic">"{paper.returnFeedback}"</p>
+                      <p className="text-rose-600 italic">&ldquo;{paper.returnFeedback}&rdquo;</p>
                     </div>
                   )}
                   

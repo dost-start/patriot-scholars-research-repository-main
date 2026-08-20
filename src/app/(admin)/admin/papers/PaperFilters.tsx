@@ -2,7 +2,7 @@
 
 import { Search, Clock, Filter, X, ChevronDown } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 
 const STATUSES = [
   { label: "All Submissions", value: "" },
@@ -29,17 +29,7 @@ export default function PaperFilters({
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(initialQuery);
 
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (query !== initialQuery) {
-        updateFilters("q", query);
-      }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [query, initialQuery]);
-
-  const updateFilters = (name: string, value: string) => {
+  const updateFilters = useCallback((name: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (value) {
       params.set(name, value);
@@ -48,7 +38,17 @@ export default function PaperFilters({
     }
     params.delete("page");
     router.push(`/admin/papers?${params.toString()}`);
-  };
+  }, [router, searchParams]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (query !== initialQuery) {
+        updateFilters("q", query);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [query, initialQuery, updateFilters]);
 
   const currentStatus = searchParams.get("status") || "";
 

@@ -22,9 +22,14 @@ export async function GET() {
     orderBy: { createdAt: "desc" }
   });
 
-  // Helper to escape CSV fields
+  // Helper to escape CSV fields. A leading =, +, -, or @ makes a spreadsheet
+  // treat the cell as a formula, so those values are prefixed with a quote
+  // (CSV injection).
   const escape = (val: string | number | boolean | null | undefined) => {
-    const str = String(val ?? "");
+    let str = String(val ?? "");
+    if (/^[=+\-@\t\r]/.test(str)) {
+      str = `'${str}`;
+    }
     if (str.includes(",") || str.includes('"') || str.includes("\n")) {
       return `"${str.replace(/"/g, '""')}"`;
     }
@@ -48,10 +53,19 @@ export async function GET() {
       escape(p.keywords.join(", ")),
       p.status,
       escape(p.uploader.name),
-      p.uploader.email,
+      escape(p.uploader.email),
       p._count.downloads,
       p.createdAt.toISOString()
     ].join(",");
+  });
+
+  // REQ-3.2.2-3: exporting the report reads scholar PII, so it is audited.
+  await db.auditLog.create({
+    data: {
+      adminId: session.user.id,
+      action: "EXPORT_REPORT_CSV",
+      detail: `Exported ${papers.length} paper record(s) including uploader contact details.`,
+    },
   });
 
   const csv = [headers_row, ...rows].join("\n");

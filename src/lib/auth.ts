@@ -50,6 +50,16 @@ export const auth = betterAuth({
     },
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
+
+    // REQ-3.1.1-3 / REQ-3.1.2-2: the One-Time Link is what activates an
+    // account. Scholars are already SPAS-verified at registration, so no
+    // manual admin step stands between verification and access.
+    afterEmailVerification: async (user) => {
+      await db.user.update({
+        where: { id: user.id },
+        data: { isActive: true },
+      })
+    },
     // Token is valid for 24 hours
     expiresIn: 60 * 60 * 24,
   },

@@ -45,11 +45,11 @@ export async function GET(
 
     if (userRecord) {
       downloaderName = userRecord.name;
-      if (userRecord.scholarProfile?.spasId) {
-        downloaderIdLabel = decryptField(userRecord.scholarProfile.spasId);
-      } else {
-        downloaderIdLabel = userRecord.role;
-      }
+      // Scholars are identified by their SPAS ID; everyone else by their
+      // account ID, so the watermark always names a specific user.
+      downloaderIdLabel = userRecord.scholarProfile?.spasId
+        ? decryptField(userRecord.scholarProfile.spasId)
+        : userRecord.id;
     }
   }
 
@@ -65,8 +65,9 @@ export async function GET(
       timeStyle: "short"
     });
 
-    const watermarkOverlay = `COPY OF: ${downloaderName.toUpperCase()} (${downloaderIdLabel})`;
-    const footerText = `PSRR RESEARCH REPOSITORY | ID: ${id} | DATE: ${downloadTime} | USER: ${downloaderName} [${downloaderIdLabel}]`;
+    // REQ-3.1.5-4: the watermark states who downloaded the file, their ID, and when.
+    const watermarkOverlay = `DOWNLOADED BY ${downloaderName.toUpperCase()} (ID: ${downloaderIdLabel})`;
+    const footerText = `Downloaded by ${downloaderName} (ID: ${downloaderIdLabel}) on ${downloadTime} via DOST-SEI Repository.`;
 
     for (const page of pages) {
       const { width, height } = page.getSize();

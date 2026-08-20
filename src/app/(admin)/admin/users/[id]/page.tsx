@@ -38,7 +38,8 @@ export default async function UserVerificationPage({
       data: {
         adminId: session.user.id,
         action: "VIEW_SCHOLAR_ID",
-        detail: `Viewed SPAS verification for scholar: ${user.name} (ID: ${user.id})`
+        // The user's name is PII — the log records the account ID, not the name.
+        detail: `Viewed SPAS verification for scholar account ${user.id}`
       }
     });
   }
@@ -159,7 +160,7 @@ export default async function UserVerificationPage({
         <div>
           <h2 className="text-sm font-bold text-psrr-navy mb-2">Account Status & Controls</h2>
           <p className="text-xs text-psrr-slate mb-4">
-            Verification is the process of matching the scholar's data with DOST-SEI records. 
+            Verification is the process of matching the scholar&apos;s data with DOST-SEI records. 
             Activation actually grants the user access to scholar features.
           </p>
         </div>

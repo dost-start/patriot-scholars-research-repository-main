@@ -64,19 +64,24 @@ export default async function AdminAnalyticsPage() {
     statusStatsResult,
     monthlyStats
   ] = await Promise.all([
+    // REQ-3.1.6-1: research output counts cover approved (published) submissions
     db.paper.groupBy({
       by: ["fieldOfStudy"],
+      where: { status: "PUBLISHED" },
       _count: { _all: true },
       orderBy: { _count: { fieldOfStudy: "desc" } },
       take: 10
     }),
     db.paper.groupBy({
       by: ["region"],
+      where: { status: "PUBLISHED" },
       _count: { _all: true },
       orderBy: { _count: { region: "desc" } }
     }),
+    // REQ-3.1.6-1: top 10 papers by download count
     db.paper.findMany({
-      take: 5,
+      where: { status: "PUBLISHED" },
+      take: 10,
       orderBy: { downloads: { _count: "desc" } },
       include: { 
         _count: { select: { downloads: true } },

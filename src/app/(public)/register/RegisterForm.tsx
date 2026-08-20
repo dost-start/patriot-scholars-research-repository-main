@@ -28,6 +28,7 @@ function PublicRegistrationForm() {
         name: formData.get("name") as string,
         email: formData.get("email") as string,
         password: formData.get("password") as string,
+        consent: formData.get("consent") === "on",
       })
     },
     initialState,
@@ -81,7 +82,7 @@ function PublicRegistrationForm() {
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor="pub-password" className="font-sans text-sm font-bold text-psrr-navy">
-          Password <span className="font-normal text-psrr-slate-light">(min. 12 characters)</span>
+          Password <span className="font-normal text-psrr-slate-light">(min. 12 chars, with a number and a symbol)</span>
         </label>
         <input
           id="pub-password"
@@ -94,6 +95,23 @@ function PublicRegistrationForm() {
           placeholder="••••••••"
         />
       </div>
+      <div className="flex items-start gap-3">
+        <input
+          id="pub-consent"
+          name="consent"
+          type="checkbox"
+          required
+          className="mt-1 h-4 w-4 shrink-0 rounded border-2 border-psrr-gold accent-psrr-gold"
+        />
+        <label htmlFor="pub-consent" className="font-sans text-[13px] leading-snug text-psrr-slate">
+          I have read and agree to the{" "}
+          <Link href="/privacy" className="font-bold text-psrr-navy-cta underline underline-offset-2">
+            Data Privacy Act (RA 10173) terms
+          </Link>
+          , and consent to the collection and processing of my personal data.
+        </label>
+      </div>
+
       <button
         type="submit"
         disabled={isPending}
@@ -113,7 +131,8 @@ function ScholarRegistrationForm() {
         email: formData.get("email") as string,
         password: formData.get("password") as string,
         spasId: formData.get("spasId") as string,
-        birthdate: new Date(formData.get("birthdate") as string), 
+        birthdate: new Date(formData.get("birthdate") as string),
+        consent: formData.get("consent") === "on",
       })
     },
     initialState,
@@ -124,8 +143,8 @@ function ScholarRegistrationForm() {
       <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
         <p className="mb-1 font-sans font-bold text-green-800">Scholar account created!</p>
         <p className="font-sans text-sm text-green-700">
-          Check your email to verify your account. An administrator will also need to
-          activate your Scholar access before you can upload papers.
+          Your SPAS ID was verified. Check your email for the verification link —
+          opening it activates your Scholar access.
         </p>
       </div>
     )
@@ -197,7 +216,7 @@ function ScholarRegistrationForm() {
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor="sch-password" className="font-sans text-sm font-bold text-psrr-navy">
-          Password <span className="font-normal text-psrr-slate-light">(min. 12 characters)</span>
+          Password <span className="font-normal text-psrr-slate-light">(min. 12 chars, with a number and a symbol)</span>
         </label>
         <input
           id="sch-password"
@@ -212,10 +231,20 @@ function ScholarRegistrationForm() {
       </div>
 
       <div className="flex items-start gap-3">
-        <div className="mt-1 h-4 w-4 shrink-0 rounded border-2 border-psrr-gold bg-transparent" />
-        <p className="font-sans text-[13px] leading-snug text-psrr-slate">
-          I have read and agree to the Data Privacy Act (RA 10173) terms.
-        </p>
+        <input
+          id="sch-consent"
+          name="consent"
+          type="checkbox"
+          required
+          className="mt-1 h-4 w-4 shrink-0 rounded border-2 border-psrr-gold accent-psrr-gold"
+        />
+        <label htmlFor="sch-consent" className="font-sans text-[13px] leading-snug text-psrr-slate">
+          I have read and agree to the{" "}
+          <Link href="/privacy" className="font-bold text-psrr-navy-cta underline underline-offset-2">
+            Data Privacy Act (RA 10173) terms
+          </Link>
+          , and consent to the collection and processing of my personal data.
+        </label>
       </div>
 
       <button

@@ -68,7 +68,7 @@ export default async function AdminOverviewPage() {
       <header className="mb-10 flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold text-psrr-navy">Analytics Overview</h1>
-          <p className="mt-2 text-psrr-slate">A summary of the repository's status and growth.</p>
+          <p className="mt-2 text-psrr-slate">A summary of the repository&apos;s status and growth.</p>
         </div>
         <a 
           href="/api/admin/export"

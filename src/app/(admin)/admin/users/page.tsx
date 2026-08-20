@@ -9,7 +9,7 @@ import { Users, Shield, GraduationCap } from "lucide-react";
 import { Metadata } from "next";
 import { Prisma } from "@prisma/client";
 
-interface UserWithProfile extends Prisma.UserGetPayload<{ include: { scholarProfile: true } }> {}
+type UserWithProfile = Prisma.UserGetPayload<{ include: { scholarProfile: true } }>
 
 export const metadata: Metadata = {
   title: "Manage Users",
@@ -34,6 +34,22 @@ export default async function AdminUsersPage({
     orderBy: { createdAt: "desc" },
     include: { scholarProfile: true },
   });
+
+  // REQ-3.2.2-3: this list decrypts every scholar's SPAS ID, so the bulk view
+  // is audited the same way the detail page is.
+  const scholarCount = users.filter(
+    (u: { role: string; scholarProfile: unknown }) => u.role === "SCHOLAR" && u.scholarProfile,
+  ).length;
+
+  if (scholarCount > 0) {
+    await db.auditLog.create({
+      data: {
+        adminId: session.user.id,
+        action: "VIEW_SCHOLAR_ID_LIST",
+        detail: `Viewed the user directory, decrypting SPAS IDs for ${scholarCount} scholar account(s).`,
+      },
+    });
+  }
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-10">

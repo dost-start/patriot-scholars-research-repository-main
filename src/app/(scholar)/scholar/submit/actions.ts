@@ -6,6 +6,28 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { uploadPaper, deletePaper } from "@/lib/storage";
 
+const MAX_FILE_BYTES = 50 * 1024 * 1024; // REQ-3.1.3-3
+const MAX_ABSTRACT_WORDS = 500; // REQ-3.1.3-2
+const MIN_KEYWORDS = 3; // REQ-3.1.3-2
+
+/**
+ * REQ-3.1.3-3: uploads are restricted to PDF. The client `accept=".pdf"` hint
+ * is trivially bypassed, so the bytes themselves are checked here — a real PDF
+ * always starts with the "%PDF-" header.
+ */
+function assertIsPdf(file: File, buffer: Buffer) {
+  const hasPdfExtension = file.name.toLowerCase().endsWith(".pdf");
+  const hasPdfHeader = buffer.subarray(0, 5).toString("latin1") === "%PDF-";
+
+  if (!hasPdfExtension || !hasPdfHeader) {
+    throw new Error("Only PDF files are accepted. Please upload a valid PDF document.");
+  }
+}
+
+function countWords(text: string) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
 export async function submitPaper(formData: FormData) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -24,24 +46,55 @@ export async function submitPaper(formData: FormData) {
   const advisorName = formData.get("advisorName") as string;
   const year = parseInt(formData.get("year") as string) || new Date().getFullYear();
   const keywordsStr = formData.get("keywords") as string;
-  const keywords = keywordsStr ? keywordsStr.split(",").map(k => k.trim()) : [];
+  const keywords = keywordsStr
+    ? keywordsStr.split(",").map(k => k.trim()).filter(Boolean)
+    : [];
   
   const coAuthorsJson = formData.get("coAuthors") as string;
   const coAuthors = coAuthorsJson ? JSON.parse(coAuthorsJson) as { name: string, userId?: string }[] : [];
+
+  // ---------------------------------------------------------------------------
+  // Metadata validation (REQ-3.1.3-2). The form marks these required, but a
+  // Server Action is a public endpoint — it has to enforce them itself.
+  // ---------------------------------------------------------------------------
+  const required: Array<[string, string]> = [
+    ["Title", title],
+    ["Abstract", abstract],
+    ["University / Institution", university],
+    ["Region", region],
+    ["Field of Study", fieldOfStudy],
+    ["Advisor / Mentor Name", advisorName],
+  ];
+  for (const [label, value] of required) {
+    if (!value || !value.trim()) {
+      throw new Error(`${label} is required.`);
+    }
+  }
+
+  if (countWords(abstract) > MAX_ABSTRACT_WORDS) {
+    throw new Error(`Abstract must be ${MAX_ABSTRACT_WORDS} words or fewer.`);
+  }
+
+  if (keywords.filter(Boolean).length < MIN_KEYWORDS) {
+    throw new Error(`Please provide at least ${MIN_KEYWORDS} comma-separated keywords.`);
+  }
+
+  if (!Number.isInteger(year) || year < 1900 || year > new Date().getFullYear() + 1) {
+    throw new Error("Year of completion is not a valid year.");
+  }
 
   const file = formData.get("file") as File;
   let storagePath: string | null = null;
 
   if (file && file.size > 0) {
-    if (file.size > 50 * 1024 * 1024) {
+    if (file.size > MAX_FILE_BYTES) {
       throw new Error("File size exceeds 50MB limit.");
     }
 
-    // Upload to Supabase Storage
-    const fileExtension = file.name.split(".").pop();
-    storagePath = `${session.user.id}/${Date.now()}.${fileExtension}`;
-    
     const buffer = Buffer.from(await file.arrayBuffer());
+    assertIsPdf(file, buffer);
+
+    storagePath = `${session.user.id}/${Date.now()}.pdf`;
     await uploadPaper(storagePath, buffer);
   }
 

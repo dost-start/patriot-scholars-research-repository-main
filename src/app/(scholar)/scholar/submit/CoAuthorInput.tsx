@@ -116,7 +116,7 @@ export function CoAuthorInput({ value, onChange, onRemove }: CoAuthorInputProps)
               ))
             ) : (
               <div className="px-4 py-3 text-xs text-psrr-slate italic">
-                No active scholars found matching "{query}"
+                No active scholars found matching &ldquo;{query}&rdquo;
               </div>
             )}
           </div>

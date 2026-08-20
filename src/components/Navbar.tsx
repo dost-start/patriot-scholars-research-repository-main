@@ -13,12 +13,8 @@ import {
   LayoutDashboard, 
   FileText, 
   Users, 
-  Settings, 
+  BarChart3, 
   PlusCircle,
-  LogOut,
-  User as UserIcon,
-  Menu,
-  X,
   LucideIcon
 } from "lucide-react";
 
@@ -57,7 +53,7 @@ export default function Navbar({ initialSession }: { initialSession: Session | n
         { name: "Admin Dashboard", href: "/admin", icon: LayoutDashboard },
         { name: "Manage Papers", href: "/admin/papers", icon: FileText },
         { name: "User Directory", href: "/admin/users", icon: Users },
-        { name: "Settings", href: "/admin/settings", icon: Settings },
+        { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
       ];
     }
 
@@ -105,10 +101,13 @@ export default function Navbar({ initialSession }: { initialSession: Session | n
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Close mobile menu on path change
-  useEffect(() => {
+  // Close the mobile menu when the route changes. Tracking the rendered
+  // pathname in state avoids a setState-in-effect cascade.
+  const [menuPathname, setMenuPathname] = useState(pathname);
+  if (menuPathname !== pathname) {
+    setMenuPathname(pathname);
     setIsMobileMenuOpen(false);
-  }, [pathname]);
+  }
 
   return (
     <nav className="sticky top-0 z-50 flex h-[72px] w-full items-center justify-between border-b border-psrr-border bg-psrr-white px-8 lg:px-16">

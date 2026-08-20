@@ -117,7 +117,7 @@ export default async function ScholarPaperDetailsPage({
                 Reviewer Feedback
               </h2>
               <p className="text-sm leading-relaxed text-rose-600 whitespace-pre-wrap italic">
-                "{paper.returnFeedback}"
+                &ldquo;{paper.returnFeedback}&rdquo;
               </p>
             </div>
           )}

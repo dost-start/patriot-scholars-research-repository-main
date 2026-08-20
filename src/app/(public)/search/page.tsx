@@ -7,6 +7,9 @@ interface SearchPageProps {
   searchParams: Promise<{
     q?: string;
     field?: string;
+    region?: string;
+    university?: string;
+    keyword?: string;
     yearStart?: string;
     yearEnd?: string;
     page?: string;
@@ -107,10 +110,21 @@ export default async function SearchPage({
   const params = await searchParams;
   const query = params.q || "";
   const field = params.field || "";
+  const region = params.region || "";
+  const university = params.university || "";
+  const keyword = params.keyword || "";
   const sort = params.sort || "relevance";
-  const yearStart = parseInt(params.yearStart || "1900");
-  const yearEnd = parseInt(params.yearEnd || "2100");
-  const page = parseInt(params.page || "1");
+
+  // Query strings are user input: a non-numeric value must fall back to the
+  // default, not reach Prisma as NaN (which throws a validation error).
+  const toInt = (value: string | undefined, fallback: number) => {
+    const parsed = Number.parseInt(value ?? "", 10);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  const yearStart = toInt(params.yearStart, 1900);
+  const yearEnd = toInt(params.yearEnd, 2100);
+  const page = Math.max(1, toInt(params.page, 1));
   const pageSize = 10;
 
   const whereClause: Prisma.PaperWhereInput = {
@@ -125,6 +139,10 @@ export default async function SearchPage({
         ],
       } : {},
       field ? { fieldOfStudy: field } : {},
+      region ? { region } : {},
+      university ? { university } : {},
+      // REQ-3.1.4-5: filter by a single keyword/topic
+      keyword ? { keywords: { has: keyword } } : {},
       {
         year: {
           gte: yearStart,
@@ -157,11 +175,44 @@ export default async function SearchPage({
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  const uniqueFields = await db.paper.findMany({
-    where: { status: "PUBLISHED" },
-    select: { fieldOfStudy: true },
-    distinct: ["fieldOfStudy"],
-  });
+  // Facet values (REQ-3.1.4-2 / REQ-3.1.4-5) — drawn from published papers only
+  const [uniqueFields, uniqueRegions, uniqueUniversities, keywordRows] = await Promise.all([
+    db.paper.findMany({
+      where: { status: "PUBLISHED" },
+      select: { fieldOfStudy: true },
+      distinct: ["fieldOfStudy"],
+      orderBy: { fieldOfStudy: "asc" },
+    }),
+    db.paper.findMany({
+      where: { status: "PUBLISHED" },
+      select: { region: true },
+      distinct: ["region"],
+      orderBy: { region: "asc" },
+    }),
+    db.paper.findMany({
+      where: { status: "PUBLISHED" },
+      select: { university: true },
+      distinct: ["university"],
+      orderBy: { university: "asc" },
+    }),
+    db.paper.findMany({
+      where: { status: "PUBLISHED" },
+      select: { keywords: true },
+    }),
+  ]);
+
+  const topKeywords = Object.entries(
+    keywordRows
+      .flatMap((row: { keywords: string[] }) => row.keywords)
+      .reduce<Record<string, number>>((acc, kw) => {
+        const key = kw.trim();
+        if (key) acc[key] = (acc[key] ?? 0) + 1;
+        return acc;
+      }, {}),
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([kw]) => kw);
 
   return (
     <div className="w-full max-w-[1400px] px-8 py-12 lg:px-16">
@@ -198,7 +249,7 @@ export default async function SearchPage({
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h4 className="font-display text-[11px] font-bold tracking-[0.2em] text-psrr-navy uppercase">Filters</h4>
-                {(query || field || params.yearStart || params.yearEnd) && (
+                {(query || field || region || university || keyword || params.yearStart || params.yearEnd) && (
                   <Link href="/search" className="text-[10px] font-bold text-rose-600 hover:underline">RESET</Link>
                 )}
               </div>
@@ -229,12 +280,91 @@ export default async function SearchPage({
 
             <div className="h-px w-full bg-psrr-border" />
 
+            {/* Region */}
+            <div className="flex flex-col gap-4">
+              <h5 className="font-sans text-[11px] font-bold tracking-widest text-psrr-slate uppercase">Region</h5>
+              <div className="flex flex-col gap-2">
+                <Link
+                  href={`/search?${new URLSearchParams({ ...params, region: "", page: "1" }).toString()}`}
+                  className={`rounded-lg px-3 py-2 text-sm transition-all ${!region ? "bg-psrr-navy/5 font-bold text-psrr-navy-cta" : "text-psrr-slate hover:bg-psrr-surface hover:text-psrr-navy"}`}
+                >
+                  All Regions
+                </Link>
+                {uniqueRegions.map((r: { region: string }) => (
+                  <Link
+                    key={r.region}
+                    href={`/search?${new URLSearchParams({ ...params, region: r.region, page: "1" }).toString()}`}
+                    className={`rounded-lg px-3 py-2 text-sm transition-all ${region === r.region ? "bg-psrr-navy/5 font-bold text-psrr-navy-cta" : "text-psrr-slate hover:bg-psrr-surface hover:text-psrr-navy"}`}
+                  >
+                    {r.region}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="h-px w-full bg-psrr-border" />
+
+            {/* University */}
+            <div className="flex flex-col gap-4">
+              <h5 className="font-sans text-[11px] font-bold tracking-widest text-psrr-slate uppercase">University</h5>
+              <div className="flex flex-col gap-2">
+                <Link
+                  href={`/search?${new URLSearchParams({ ...params, university: "", page: "1" }).toString()}`}
+                  className={`rounded-lg px-3 py-2 text-sm transition-all ${!university ? "bg-psrr-navy/5 font-bold text-psrr-navy-cta" : "text-psrr-slate hover:bg-psrr-surface hover:text-psrr-navy"}`}
+                >
+                  All Universities
+                </Link>
+                {uniqueUniversities.map((u: { university: string }) => (
+                  <Link
+                    key={u.university}
+                    href={`/search?${new URLSearchParams({ ...params, university: u.university, page: "1" }).toString()}`}
+                    className={`rounded-lg px-3 py-2 text-sm transition-all ${university === u.university ? "bg-psrr-navy/5 font-bold text-psrr-navy-cta" : "text-psrr-slate hover:bg-psrr-surface hover:text-psrr-navy"}`}
+                  >
+                    {u.university}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {topKeywords.length > 0 && (
+              <>
+                <div className="h-px w-full bg-psrr-border" />
+                <div className="flex flex-col gap-4">
+                  <h5 className="font-sans text-[11px] font-bold tracking-widest text-psrr-slate uppercase">Keywords</h5>
+                  <div className="flex flex-wrap gap-2">
+                    {keyword && (
+                      <Link
+                        href={`/search?${new URLSearchParams({ ...params, keyword: "", page: "1" }).toString()}`}
+                        className="rounded-full border border-psrr-border px-3 py-1 text-[11px] font-bold text-rose-600 hover:bg-psrr-surface"
+                      >
+                        Clear
+                      </Link>
+                    )}
+                    {topKeywords.map((kw: string) => (
+                      <Link
+                        key={kw}
+                        href={`/search?${new URLSearchParams({ ...params, keyword: kw, page: "1" }).toString()}`}
+                        className={`rounded-full px-3 py-1 text-[11px] transition-all ${keyword === kw ? "bg-psrr-navy-cta font-bold text-white" : "bg-psrr-surface text-psrr-slate hover:text-psrr-navy"}`}
+                      >
+                        #{kw}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="h-px w-full bg-psrr-border" />
+
             {/* Year Range */}
             <div className="flex flex-col gap-4">
               <h5 className="font-sans text-[11px] font-bold tracking-widest text-psrr-slate uppercase">Publication Year</h5>
               <form action="/search" method="GET" className="flex flex-col gap-4">
                 {query && <input type="hidden" name="q" value={query} />}
                 {field && <input type="hidden" name="field" value={field} />}
+                {region && <input type="hidden" name="region" value={region} />}
+                {university && <input type="hidden" name="university" value={university} />}
+                {keyword && <input type="hidden" name="keyword" value={keyword} />}
                 {sort && <input type="hidden" name="sort" value={sort} />}
                 <div className="flex items-center gap-2">
                   <input 
